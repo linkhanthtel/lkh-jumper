@@ -1,0 +1,107 @@
+.game {
+  width: 100%;
+  max-width: 800px;
+  height: 100vh;
+  max-height: 500px;
+  background-color: #87CEEB;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  margin: 0 auto;
+}
+
+.bird {
+  width: clamp(20px, 4vw, 30px);
+  height: clamp(20px, 4vw, 30px);
+  background-color: yellow;
+  border-radius: 50%;
+  position: absolute;
+  left: 50px;
+  transition: top 0.1s;
+}
+
+.pipe-top, .pipe-bottom {
+  width: clamp(30px, 6vw, 50px);
+  background-color: green;
+  position: absolute;
+}
+
+.pipe-top {
+  top: 0;
+}
+
+.pipe-bottom {
+  bottom: 0;
+  height: 500px;
+}
+
+.start-message, .game-over {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(16px, 4vw, 24px);
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  width: 80%;
+}
+
+.score {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: clamp(16px, 4vw, 24px);
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 100;
+}
+
+.button {
+  padding: 10px 20px;
+  font-size: clamp(14px, 3vw, 18px);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.button:hover {
+  background-color: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
+}
+
+.high-score {
+  position: absolute;
+  top: 50px;
+  right: 20px;
+  font-size: clamp(14px, 3vw, 20px);
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 768px) {
+  .game {
+    height: 80vh;
+  }
+  
+  .controls {
+    bottom: 40px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .game {
+    height: 70vh;
+  }
+}
