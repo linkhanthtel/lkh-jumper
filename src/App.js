@@ -274,7 +274,7 @@ function App() {
         {/* Game UI */}
         {!gameStarted && (
           <div className="start-screen">
-            <h1>Flappy Bird</h1>
+            <h1>LKH Jump</h1>
 
             <div className="difficulty-section">
               <h2>Select Difficulty</h2>
@@ -314,7 +314,7 @@ function App() {
             </button>
 
             <p className="instructions">Click or press Space to jump</p>
-            <p className="instructions">Press M to mute/unmute sounds</p>
+            <p className="instructions">Press M to mute/unmute sounds. More sounds and theme to be added</p>
             <p className="instructions">Press F for fullscreen</p>
             <p className="instructions">Press ESC to pause</p>
           </div>
