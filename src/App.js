@@ -1,9 +1,11 @@
+"use client"
+
 import React, { useState, useEffect, useRef } from "react"
 import "./App.css"
 
 function App() {
   // State declarations
-  const [birdPosition, setBirdPosition] = useState(350) // Adjusted for larger canvas
+  const [birdPosition, setBirdPosition] = useState(window.innerHeight / 2)
   const [gameStarted, setGameStarted] = useState(false)
   const [score, setScore] = useState(0)
   const [gameOver, setGameOver] = useState(false)
@@ -13,18 +15,44 @@ function App() {
   const [difficulty, setDifficulty] = useState("normal")
   const [birdRotation, setBirdRotation] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const gameContainerRef = useRef(null)
+
+  // Window dimensions
+  const [windowDimensions, setWindowDimensions] = useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 1000,
+    height: typeof window !== "undefined" ? window.innerHeight : 700,
+  })
 
   // Audio references
   const jumpSoundRef = useRef(null)
+  const hitSoundRef = useRef(null)
   const scoreSoundRef = useRef(null)
-  const gameOverSoundRef = useRef(null)
   const buttonClickSoundRef = useRef(null)
 
   // Game constants
   const gravity = 5
   const jumpHeight = 60
-  const pipeGap = 220 // Slightly increased for larger canvas
+  const pipeGap = Math.min(220, windowDimensions.height * 0.3) // Responsive pipe gap
   const pipeSpeed = difficulty === "easy" ? 3 : difficulty === "hard" ? 7 : 5
+  const pipeWidth = 80
+
+  // Update window dimensions on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      })
+      // Adjust bird position when window is resized
+      if (!gameStarted) {
+        setBirdPosition(window.innerHeight / 2)
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [gameStarted])
 
   // Sound functions
   const playSound = (soundRef) => {
@@ -37,6 +65,34 @@ function App() {
   const toggleMute = (e) => {
     e.stopPropagation()
     setIsMuted(!isMuted)
+    playSound(buttonClickSoundRef)
+  }
+
+  // Fullscreen toggle
+  const toggleFullscreen = (e) => {
+    e.stopPropagation()
+
+    if (!document.fullscreenElement) {
+      if (gameContainerRef.current.requestFullscreen) {
+        gameContainerRef.current.requestFullscreen()
+      } else if (gameContainerRef.current.webkitRequestFullscreen) {
+        gameContainerRef.current.webkitRequestFullscreen()
+      } else if (gameContainerRef.current.msRequestFullscreen) {
+        gameContainerRef.current.msRequestFullscreen()
+      }
+      setIsFullscreen(true)
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen()
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen()
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen()
+      }
+      setIsFullscreen(false)
+    }
+
+    playSound(buttonClickSoundRef)
   }
 
   // Jump function
@@ -54,7 +110,9 @@ function App() {
       const interval = setInterval(() => {
         setBirdPosition((position) => position + gravity)
         setBirdRotation((rotation) => Math.min(rotation + 2, 30)) // Gradually rotate bird down
-        setPipes((pipes) => pipes.map((pipe) => ({ ...pipe, x: pipe.x - pipeSpeed })).filter((pipe) => pipe.x > -100))
+        setPipes((pipes) =>
+          pipes.map((pipe) => ({ ...pipe, x: pipe.x - pipeSpeed })).filter((pipe) => pipe.x > -pipeWidth),
+        )
       }, 30)
 
       return () => clearInterval(interval)
@@ -65,13 +123,13 @@ function App() {
   useEffect(() => {
     if (gameStarted && !gameOver && !isPaused) {
       const pipeInterval = setInterval(() => {
-        const newPipeY = Math.random() * (500 - pipeGap) // Adjusted for larger canvas
-        setPipes((pipes) => [...pipes, { x: 1000, y: newPipeY, passed: false }]) // Adjusted for larger canvas
+        const newPipeY = Math.random() * (windowDimensions.height * 0.6 - pipeGap)
+        setPipes((pipes) => [...pipes, { x: windowDimensions.width, y: newPipeY, passed: false }])
       }, 3000)
 
       return () => clearInterval(pipeInterval)
     }
-  }, [gameStarted, gameOver, isPaused, pipeGap])
+  }, [gameStarted, gameOver, isPaused, pipeGap, windowDimensions])
 
   // Keyboard controls
   useEffect(() => {
@@ -86,6 +144,12 @@ function App() {
       if (e.code === "KeyM") {
         setIsMuted(!isMuted)
       }
+      if (e.code === "KeyF") {
+        toggleFullscreen(e)
+      }
+      if (e.code === "Escape" && gameStarted && !gameOver) {
+        togglePause(e)
+      }
     }
 
     document.addEventListener("keydown", handleKeyPress)
@@ -97,31 +161,30 @@ function App() {
     if (!gameStarted || gameOver) return
 
     // Check if bird hits the ground or ceiling
-    if (birdPosition > 650 || birdPosition < 0) {
-      // Adjusted for larger canvas
+    if (birdPosition > windowDimensions.height * 0.8 - 40 || birdPosition < 0) {
       setGameOver(true)
-      playSound(gameOverSoundRef)
+      playSound(hitSoundRef)
       return
     }
 
     // Check for pipe collisions
     for (const pipe of pipes) {
-      if (pipe.x < 100 && pipe.x > 20) {
+      if (pipe.x < windowDimensions.width * 0.1 + 40 && pipe.x > windowDimensions.width * 0.1 - pipeWidth) {
         if (birdPosition < pipe.y || birdPosition > pipe.y + pipeGap) {
           setGameOver(true)
-          playSound(gameOverSoundRef)
+          playSound(hitSoundRef)
           return
         }
       }
 
       // Score when passing a pipe
-      if (pipe.x < 50 && !pipe.passed) {
+      if (pipe.x < windowDimensions.width * 0.1 - 20 && !pipe.passed) {
         setScore((score) => score + 1)
         setPipes((pipes) => pipes.map((p) => (p === pipe ? { ...p, passed: true } : p)))
         playSound(scoreSoundRef)
       }
     }
-  }, [birdPosition, pipes, gameStarted, gameOver, pipeGap, score])
+  }, [birdPosition, pipes, gameStarted, gameOver, pipeGap, score, windowDimensions])
 
   // High score tracking
   useEffect(() => {
@@ -133,7 +196,7 @@ function App() {
   // Reset game
   const resetGame = (e) => {
     if (e) e.stopPropagation()
-    setBirdPosition(350) // Adjusted for larger canvas
+    setBirdPosition(windowDimensions.height / 2)
     setGameOver(false)
     setScore(0)
     setPipes([])
@@ -145,7 +208,7 @@ function App() {
 
   // Toggle pause
   const togglePause = (e) => {
-    e.stopPropagation()
+    if (e) e.stopPropagation()
     setIsPaused(!isPaused)
     playSound(buttonClickSoundRef)
   }
@@ -158,11 +221,11 @@ function App() {
   }
 
   return (
-    <div className="game-container">
+    <div className={`game-container ${isFullscreen ? "fullscreen" : ""}`} ref={gameContainerRef}>
       {/* Audio elements */}
       <audio ref={jumpSoundRef} src="/sounds/jump.mp3" preload="auto"></audio>
+      <audio ref={hitSoundRef} src="/sounds/hit.mp3" preload="auto"></audio>
       <audio ref={scoreSoundRef} src="/sounds/score.mp3" preload="auto"></audio>
-      <audio ref={gameOverSoundRef} src="/sounds/game-over.mp3" preload="auto"></audio>
       <audio ref={buttonClickSoundRef} src="/sounds/click.mp3" preload="auto"></audio>
 
       <div
@@ -203,10 +266,15 @@ function App() {
           {isMuted ? "🔇" : "🔊"}
         </button>
 
+        {/* Fullscreen button */}
+        <button className="fullscreen-button" onClick={toggleFullscreen}>
+          {isFullscreen ? "⤓" : "⤢"}
+        </button>
+
         {/* Game UI */}
         {!gameStarted && (
           <div className="start-screen">
-            <h1>LKH Jump</h1>
+            <h1>Flappy Bird</h1>
 
             <div className="difficulty-section">
               <h2>Select Difficulty</h2>
@@ -247,7 +315,8 @@ function App() {
 
             <p className="instructions">Click or press Space to jump</p>
             <p className="instructions">Press M to mute/unmute sounds</p>
-            <p className="instructions">Sound effects to be added, now play without sound :))</p>
+            <p className="instructions">Press F for fullscreen</p>
+            <p className="instructions">Press ESC to pause</p>
           </div>
         )}
 
